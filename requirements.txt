@@ -1,3 +1,5 @@
+opencv-contrib-python
+h5py
 pytest
 numpy
 matplotlib

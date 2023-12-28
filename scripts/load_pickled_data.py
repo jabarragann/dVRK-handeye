@@ -13,7 +13,7 @@ with open("data/handeye_data_v1/data_00.pkl", "rb") as file:
 print(data_dict)
 
 print(data_dict["marker_rvec"])
-print(data_dict["marker_rvec"])
+print(data_dict["marker_tvec"])
 print(data_dict["robot_jp"])
 print(data_dict["robot_cp"])
 
