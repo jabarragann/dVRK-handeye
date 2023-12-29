@@ -15,7 +15,7 @@ def process_marker_pose(tvec: np.ndarray, rvec: np.ndarray) -> np.ndarray:
     return pose
 
 
-hdf_path = Path("data/test.hdf5")
+hdf_path = Path("data/collection1.hdf5")
 window_name = "marker_detected"
 cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 cv2.resizeWindow(window_name, 640, 480)
@@ -35,7 +35,9 @@ with h5py.File(hdf_path, "w") as hdf_file:
             data_dict = pickle.load(file)
 
         robot_poses[:, :, i] = data_dict["robot_cp"]
-        marker_poses[:,:,i] = process_marker_pose(data_dict["marker_tvec"], data_dict["marker_rvec"])
+        marker_poses[:, :, i] = process_marker_pose(
+            data_dict["marker_tvec"], data_dict["marker_rvec"]
+        )
 
         dataset_name = f"image_{i}"
         images_group.create_dataset(dataset_name, data=data_dict["img"])
