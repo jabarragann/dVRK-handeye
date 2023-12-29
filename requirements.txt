@@ -13,6 +13,7 @@ hydra-core
 click
 tqdm
 --extra-index-url https://rospypi.github.io/simple/
+cv-bridge
 rospy
 tf2-ros
 PyKDL
