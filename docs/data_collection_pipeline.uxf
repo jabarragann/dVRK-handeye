@@ -1,0 +1,12 @@
+<diagram program="umletino" version="15.1"><zoom_level>10</zoom_level><help_text>Space for diagram notes
+</help_text><element><id>UMLClass</id><coordinates><x>60</x><y>160</y><w>100</w><h>70</h></coordinates><panel_attributes>SyncRosClient</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>60</x><y>310</y><w>100</w><h>70</h></coordinates><panel_attributes>SampleDataset</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>270</x><y>130</y><w>220</w><h>120</h></coordinates><panel_attributes>DataQueue
+
+_umletcode=
+//drawing a solid Circle without border using drawArc
+lw=0; bg=red; transparency=0;
+drawCircle(40,60,30)
+drawCircle(110,60,30)
+_umletcode=
+drawText("DataSample", 40, 110, center)</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>100</x><y>220</y><w>80</w><h>110</h></coordinates><panel_attributes>lt=&lt;&lt;&lt;-
+depends</panel_attributes><additional_attributes>10;90;10;10</additional_attributes></element><element><id>Relation</id><coordinates><x>150</x><y>180</y><w>140</w><h>40</h></coordinates><panel_attributes>lt=&lt;&lt;&lt;-
+produces</panel_attributes><additional_attributes>120;20;10;20</additional_attributes></element></diagram>
