@@ -99,9 +99,10 @@ class HDF5Writer:
 
     def __post_init__(self):
         # Member attributes
-        self.file_path = None
+        self.file_path = self._create_path()
         self.current_dataset_size = None
         self._internal_idx = 0
+
 
     def _create_path(self) -> Path:
         if not os.path.exists(self.output_dir):
@@ -127,7 +128,6 @@ class HDF5Writer:
 
     def _init_hdf5_file(self):
 
-        self.file_path = self._create_path()
         self._query_permission_to_overwrite(self.file_path)
         self.hdf5_file_handler = h5py.File(self.file_path, "w")
 
@@ -207,6 +207,16 @@ def test1():
 
     with h5_writer as writer:
         writer.write_chunk(data_container)
+
+    with h5py.File(h5_writer.file_path, "r") as f:
+        print(f.keys())
+        print(f["data"].keys())
+        print(f["data"]["camera_l"].shape)
+        print(f["data"]["camera_r"].shape)
+
+        img_data = f["data"]["camera_l"][:]
+        assert np.all(img_data[0] == np.ones((480, 640, 3), dtype=np.uint8))
+        assert np.all(img_data[3] == (np.ones((480, 640, 3), dtype=np.uint8)+3))
 
 
 if __name__ == "__main__":
