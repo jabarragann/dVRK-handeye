@@ -19,6 +19,7 @@ class Hdf5EntryConfig:
     chunk_shape: Tuple[int]
     max_shape: Tuple[int]
     compression: str
+    dtype: np.dtype
 
     def __post_init__(self):
         self.chunk_size = self.chunk_shape[0]
@@ -72,7 +73,7 @@ class DataContainer:
         self.max_idx = self.dataset_config[0].chunk_size
 
         for config in self.dataset_config:
-            self._internal_data_dict[config.dataset_name] = np.zeros(config.chunk_shape)
+            self._internal_data_dict[config.dataset_name] = np.zeros(config.chunk_shape, dtype=config.dtype)
 
     def add_data(self, data_dict: dict):
         """
@@ -152,13 +153,13 @@ class HDF5Writer:
                 shape=config.chunk_shape,
                 maxshape=config.max_shape,
                 compression=config.compression,
+                dtype=config.dtype
             )
 
     def write_chunk(self, data_container: DataContainer):
         idx = self._internal_idx
         s = self.current_dataset_size
 
-        config: Hdf5EntryConfig
         for config in self.dataset_config:
             self.datasets_dict[config.dataset_name][idx * s : (idx + 1) * s, :] = (
                 data_container._internal_data_dict[config.dataset_name]

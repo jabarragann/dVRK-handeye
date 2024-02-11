@@ -14,7 +14,7 @@ import numpy as np
 # ROS client configuration
 ##############################
 
-
+# fmt: off
 class RosTopics(Enum):
     """
     Topics to record in sync. Each enum value is a tuple with the following elements:
@@ -23,10 +23,11 @@ class RosTopics(Enum):
     attribute_name: corresponds to the attribute name in the DatasetSample class
     """
 
-    CAMERA_L_IMAGE = ("/ambf/env/cameras/cameraL/ImageData", Image, "left_rgb_img")
-    CAMERA_R_IMAGE = ("/ambf/env/cameras/cameraL2/ImageData", Image, "right_rgb_img")
+    CAMERA_L_IMAGE = ( "/ambf/env/cameras/cameraL/ImageData", Image, "left_rgb_img")
+    CAMERA_R_IMAGE = ( "/ambf/env/cameras/cameraL2/ImageData", Image, "right_rgb_img")
     MEASURED_CP = ("/CRTK/psm1/measured_cp", PoseStamped, "measured_cp")
     MEASURED_JP = ("/CRTK/psm1/measured_js", JointState, "measured_jp")
+# fmt: on
 
 
 selected_topics = [
