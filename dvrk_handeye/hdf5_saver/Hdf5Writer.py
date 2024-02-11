@@ -2,10 +2,6 @@ from dataclasses import dataclass
 from pathlib import Path
 import time
 import numpy as np
-from dvrk_handeye.hdf5_saver.SyncRosClient import (
-    AbstractSimulationClient,
-    DatasetSample,
-)
 import os
 import h5py
 from enum import Enum
@@ -73,22 +69,31 @@ class DataContainer:
         self.max_idx = self.dataset_config[0].chunk_size
 
         for config in self.dataset_config:
-            self._internal_data_dict[config.dataset_name] = np.zeros(config.chunk_shape, dtype=config.dtype)
+            self._internal_data_dict[config.dataset_name] = np.zeros(
+                config.chunk_shape, dtype=config.dtype
+            )
 
     def add_data(self, data_dict: dict):
         """
-        Data is meant to be feeded one element at a time.
+        Data is meant to be feed one element at a time.
         """
 
-        if self.internal_idx >= self.max_idx:
+        if self.is_full():
             raise ValueError("Chunk is full")
 
         for key, value in data_dict.items():
             if key not in self._internal_data_dict:
                 raise ValueError(f"Dataset {key} not found in the container config")
-            self._internal_data_dict[key][self.internal_idx] = value
+
+            try:
+                self._internal_data_dict[key][self.internal_idx] = value
+            except ValueError as e:
+                raise ValueError(f"Error adding data to {key}. {e}")
 
         self.internal_idx += 1
+
+    def is_full(self):
+        return self.internal_idx >= self.max_idx
 
 
 @dataclass
@@ -102,7 +107,6 @@ class HDF5Writer:
         self.file_path = self._create_path()
         self.current_dataset_size = None
         self._internal_idx = 0
-
 
     def _create_path(self) -> Path:
         if not os.path.exists(self.output_dir):
@@ -153,7 +157,7 @@ class HDF5Writer:
                 shape=config.chunk_shape,
                 maxshape=config.max_shape,
                 compression=config.compression,
-                dtype=config.dtype
+                dtype=config.dtype,
             )
 
     def write_chunk(self, data_container: DataContainer):
@@ -216,8 +220,48 @@ def test1():
 
         img_data = f["data"]["camera_l"][:]
         assert np.all(img_data[0] == np.ones((480, 640, 3), dtype=np.uint8))
-        assert np.all(img_data[3] == (np.ones((480, 640, 3), dtype=np.uint8)+3))
+        assert np.all(img_data[3] == (np.ones((480, 640, 3), dtype=np.uint8) + 3))
+
+
+def test2():
+    from dvrk_handeye.hdf5_saver.custom_configs.hand_eye_dvrk_config import (
+        HandEyeDVRKConfig,
+    )
+
+    print("test2")
+    dataset_config = Hdf5FullDatasetConfig.create_from_enum_list(
+        [HandEyeDVRKConfig.camera_l]
+    )
+
+    h5_writer = HDF5Writer(Path("temp"), dataset_config)
+
+    data_container = DataContainer(dataset_config)
+
+    with h5_writer as writer:
+        for i in range(dataset_config[0].chunk_size * 3+1):
+            if data_container.is_full():
+                print("writing chunk")
+                writer.write_chunk(data_container)
+                data_container = DataContainer(dataset_config)
+
+            data_dict = {}
+            data_dict[HandEyeDVRKConfig.camera_l.value[0]] = (
+                np.ones((480, 640, 3), dtype=np.uint8) + i
+            )
+
+            data_container.add_data(data_dict)
+
+    print(i)
+
+    with h5py.File(h5_writer.file_path, "r") as f:
+        print(f.keys())
+        print(f["data"].keys())
+        print(f["data"]["camera_l"].shape)
+
+        img_data = f["data"]["camera_l"][:]
+        assert np.all(img_data[0] == np.ones((480, 640, 3), dtype=np.uint8))
+        assert np.all(img_data[3] == (np.ones((480, 640, 3), dtype=np.uint8) + 3))
 
 
 if __name__ == "__main__":
-    test1()
+    test2()
