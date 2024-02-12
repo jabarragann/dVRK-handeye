@@ -73,6 +73,9 @@ class DataContainer:
                 config.chunk_shape, dtype=config.dtype
             )
 
+    def __len__(self):
+        return self.internal_idx
+
     def add_data(self, data_dict: dict):
         """
         Data is meant to be feed one element at a time.
@@ -94,6 +97,9 @@ class DataContainer:
 
     def is_full(self):
         return self.internal_idx >= self.max_idx
+
+    def get_data(self, key):
+        return self._internal_data_dict[key][: self.internal_idx][: self.internal_idx]
 
 
 @dataclass
@@ -147,33 +153,39 @@ class HDF5Writer:
         self.data_group = self.hdf5_file_handler.create_group("data")
         self.create_datasets()
 
+    def __len__(self):
+        return self._internal_idx
+
     def create_datasets(self):
         self.datasets_dict: Dict[str, h5py.Dataset] = dict()
         self.current_dataset_size = self.dataset_config[0].chunk_size
 
         for config in self.dataset_config:
+            initial_shape = tuple([0] + list(config.chunk_shape[1:]))
             self.datasets_dict[config.dataset_name] = self.data_group.create_dataset(
                 config.dataset_name,
-                shape=config.chunk_shape,
+                shape=initial_shape,
                 maxshape=config.max_shape,
                 compression=config.compression,
                 dtype=config.dtype,
             )
 
     def write_chunk(self, data_container: DataContainer):
+
+        self.increase_size(len(data_container))
+
         idx = self._internal_idx
-        s = self.current_dataset_size
-
         for config in self.dataset_config:
-            self.datasets_dict[config.dataset_name][idx * s : (idx + 1) * s, :] = (
-                data_container._internal_data_dict[config.dataset_name]
-            )
+            new_data = data_container.get_data(config.dataset_name)
+            self.datasets_dict[config.dataset_name][idx:] = new_data
 
+        self._internal_idx += len(data_container)
+
+    def increase_size(self, size_of_new_container):
+        for config in self.dataset_config:
             new_size = list(config.chunk_shape)
-            new_size[0] = s * (idx + 1)
+            new_size[0] = size_of_new_container + self._internal_idx
             self.datasets_dict[config.dataset_name].resize(new_size)
-
-        self._internal_idx += 1
 
     def __enter__(self):
         self._init_hdf5_file()
@@ -238,7 +250,7 @@ def test2():
     data_container = DataContainer(dataset_config)
 
     with h5_writer as writer:
-        for i in range(dataset_config[0].chunk_size * 3+1):
+        for i in range(dataset_config[0].chunk_size * 3 + 1):
             if data_container.is_full():
                 print("writing chunk")
                 writer.write_chunk(data_container)
@@ -261,7 +273,49 @@ def test2():
         img_data = f["data"]["camera_l"][:]
         assert np.all(img_data[0] == np.ones((480, 640, 3), dtype=np.uint8))
         assert np.all(img_data[3] == (np.ones((480, 640, 3), dtype=np.uint8) + 3))
+        assert np.all(img_data[120] == (np.ones((480, 640, 3), dtype=np.uint8) + 120))
+        assert np.all(img_data[220] == (np.ones((480, 640, 3), dtype=np.uint8) + 220))
+        assert np.all(img_data[255] == (np.zeros((480, 640, 3), dtype=np.uint8)))
+
+
+def test3():
+    print("test3")
+
+    my_config = Hdf5EntryConfig(
+        "camera_l", (20, 480, 640, 3), (None, 480, 640, 3), "gzip", np.uint8
+    )
+
+    dataset_config = Hdf5FullDatasetConfig([my_config])
+    h5_writer = HDF5Writer(Path("temp"), dataset_config)
+    data_container = DataContainer(dataset_config)
+
+    chunk_size = dataset_config[0].chunk_size
+
+    with h5_writer as writer:
+        for i in range(chunk_size + chunk_size // 2):
+            if data_container.is_full():
+                print("writing chunk")
+                writer.write_chunk(data_container)
+                data_container = DataContainer(dataset_config)
+
+            data_dict = {}
+            data_dict[my_config.dataset_name] = (
+                np.ones((480, 640, 3), dtype=np.uint8) + i
+            )
+            data_container.add_data(data_dict)
+
+        if len(data_container) > 0:
+            print(len(data_container))
+            print("writing last chunk")
+            writer.write_chunk(data_container)
+
+    with h5py.File(h5_writer.file_path, "r") as f:
+
+        img_data = f["data"]["camera_l"][:]
+        assert np.all(img_data[0] == np.ones((480, 640, 3), dtype=np.uint8))
+        assert np.all(img_data[23] == (np.ones((480, 640, 3), dtype=np.uint8) + 23))
+        assert img_data.shape[0] == chunk_size + chunk_size // 2
 
 
 if __name__ == "__main__":
-    test2()
+    test3()
