@@ -1,5 +1,7 @@
 from __future__ import annotations
+from queue import Queue
 import time
+from typing import Dict
 import numpy as np
 import rospy
 from dataclasses import dataclass, field
@@ -9,6 +11,7 @@ from dvrk_handeye.hdf5_saver.SaverConfig import (
     RosTopics,
     get_topics_processing_cb,
     selected_topics,
+    topic_to_key_in_container,
 )
 
 
@@ -27,6 +30,19 @@ class DatasetSample:
             dict_variables[ros_topic_config.value[2]] = value
         return cls(**dict_variables)
 
+    def to_dict(self) -> Dict[str, np.ndarray]:
+        """
+        Map a `DatasetSample` to a dictionary that can be consumed by the
+        `DataContainer`.  Keys in the output dictionary are defined by the
+        `topic_to_key_in_container` config dict
+        """
+        new_dict = {}
+
+        for topic, new_key in topic_to_key_in_container.items():
+            new_dict[new_key] = getattr(self, topic.value[2])
+
+        return new_dict
+
 
 @dataclass
 class AbstractSimulationClient(ABC):
@@ -41,7 +57,7 @@ class AbstractSimulationClient(ABC):
     """
 
     raw_data: DatasetSample = field(default=None, init=False)
-    client_name = "ambf_collection_client"
+    client_name: str = "ambf_collection_client"
 
     def __post_init__(self):
         if "/unnamed" == rospy.get_name():
@@ -74,7 +90,12 @@ class AbstractSimulationClient(ABC):
 
 @dataclass
 class SyncRosClient(AbstractSimulationClient):
+    data_queue: Queue = None
+
     def __post_init__(self):
+        if self.data_queue is None:
+            raise ValueError("data_queue should be provided in constructor")
+
         super().__post_init__()
         self.subscribers = []
         self.callback_dict = get_topics_processing_cb()
@@ -99,6 +120,8 @@ class SyncRosClient(AbstractSimulationClient):
             raw_data_dict[topic] = self.callback_dict[topic](input_msg)
 
         self.raw_data = DatasetSample.from_dict(raw_data_dict)
+
+        self.data_queue.put(self.raw_data)
 
 
 def main():

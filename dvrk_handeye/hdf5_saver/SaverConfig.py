@@ -8,6 +8,9 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import PyKDL
 import numpy as np
+from dvrk_handeye.hdf5_saver.custom_configs.hand_eye_dvrk_config import (
+    HandEyeDVRKConfig,
+)
 
 
 ##############################
@@ -29,6 +32,13 @@ class RosTopics(Enum):
     MEASURED_JP = ("/CRTK/psm1/measured_js", JointState, "measured_jp")
 # fmt: on
 
+# Association between rostopics and the corresponding key in DataContainer
+topic_to_key_in_container = {
+    RosTopics.CAMERA_L_IMAGE: HandEyeDVRKConfig.camera_l.value[0],
+    RosTopics.CAMERA_R_IMAGE: HandEyeDVRKConfig.camera_r.value[0],
+    RosTopics.MEASURED_CP: HandEyeDVRKConfig.psm1_measured_cp.value[0],
+    RosTopics.MEASURED_JP: HandEyeDVRKConfig.psm1_measured_jp.value[0],
+}
 
 selected_topics = [
     RosTopics.CAMERA_L_IMAGE,
