@@ -4,12 +4,6 @@ from cv2 import aruco
 from dataclasses import dataclass
 import numpy as np
 
-# fmt: off
-mtx = np.array( [ [1747.03274843401, 0.0, 521.0492603841079], [0.0, 1747.8694061586648, 494.32395180615987], [0.0, 0.0, 1.0], ])
-dist = np.array( [ -0.33847195608374453, 0.16968704500434714, 0.0007293228134352138, 0.005422675750927001, 0.9537762252401928, ])
-marker_size = 0.01
-# fmt: on
-
 
 @dataclass
 class VisionTracker:
@@ -35,9 +29,16 @@ class VisionTracker:
 
 
 def detect_aruco_markers():
+
+    # fmt: off
+    mtx = np.array( [ [1747.03274843401, 0.0, 521.0492603841079], [0.0, 1747.8694061586648, 494.32395180615987], [0.0, 0.0, 1.0], ])
+    dist = np.array( [ -0.33847195608374453, 0.16968704500434714, 0.0007293228134352138, 0.005422675750927001, 0.9537762252401928, ])
+    marker_size = 0.01
+    # fmt: on
+
     vision_tracker = VisionTracker(mtx, dist, marker_size)
-    path = Path("./data/marker_pictures/sample1.jpg")
-    # path = Path("./data/puppy.jpg")
+    # path = Path("./data/marker_pictures/sample1.jpg")
+    path = Path("./data/other/puppy.jpg")
     img = cv2.imread(str(path))
     img = cv2.resize(img, (0, 0), fx=0.2, fy=0.2)
     corners, ids, rejectedImgPoints = vision_tracker.detect_markers(img)
