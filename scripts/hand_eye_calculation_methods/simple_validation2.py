@@ -2,22 +2,26 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pandas as pd
+from dvrk_handeye.opencv_utils import draw_axis
 
 # fmt: off
+# Camera intrinsics
 mtx =   [1767.7722 ,    0.     ,  529.11477,
             0.     , 1774.33579,  510.58841,
             0.     ,    0.     ,    1.       ]
+# Camera distortion
 dist = [-0.337317, 0.500592, 0.001082, 0.002775, 0.000000]
 
-Y = [[-0.722624032680848,    0.5730602138325281, -0.3865443036888354,  -0.06336454384831497], 
-     [ 0.6870235345618597,   0.533741788848803,  -0.49307034568569336, -0.15304205999332426], 
-     [-0.07624414961292797, -0.621869515379792,  -0.7794004974922103,   0.0664797333995826], 
-     [0.0, 0.0, 0.0, 1.0]]
+# Output of the hand-eye calibration
+cam_T_base = [[-0.722624032680848,    0.5730602138325281, -0.3865443036888354,  -0.06336454384831497], 
+              [ 0.6870235345618597,   0.533741788848803,  -0.49307034568569336, -0.15304205999332426], 
+              [-0.07624414961292797, -0.621869515379792,  -0.7794004974922103,   0.0664797333995826], 
+              [0.0, 0.0, 0.0, 1.0]]
 
 mtx = np.array(mtx).reshape(3, 3)
 dist = np.array(dist)
-Y = np.array(Y)
-Y_inv = np.linalg.inv(Y)
+cam_T_base = np.array(cam_T_base)
+base_T_cam = np.linalg.inv(cam_T_base)
 
 # fmt: on
 
@@ -39,34 +43,32 @@ def load_poses_data(root_path: Path):
 
 
 def main():
-
     # raw images
-    root_path = Path("datasets/20240213_212626_raw_dataset_handeye_raw_img_local")
+    # root_path = Path("datasets/20240213_212626_raw_dataset_handeye_raw_img_local")
 
     # rectified images
-    # root_path = Path("datasets/20240213_212744_raw_dataset_handeye_rect_img_local")
+    root_path = Path("datasets/20240213_212744_raw_dataset_handeye_rect_img_local")
 
-    idx = 30
+    idx = 68
     img = load_images_data(root_path, idx)
 
     pose_data = load_poses_data(root_path)
+    base_T_gripper = pose_data[idx]
 
-    pose = Y @ pose_data[idx]
+    pose = cam_T_base @ base_T_gripper
     tvec = pose[:3, 3]
     rvec = cv2.Rodrigues(pose[:3, :3])[0]
 
     points_3d = np.array([[[0, 0, 0]]], np.float32)
     points_2d, _ = cv2.projectPoints(points_3d, rvec, tvec, mtx, dist)
 
-    print(points_2d)
-    print(pose_data[idx])
-
-    print(img.shape)
-
+    # Anotate image with gripper pose
+    img = draw_axis(img, mtx, dist, pose, size=0.01)
     points_2d = tuple(points_2d.astype(np.int32)[0, 0])
-    print(points_2d)
+    img = cv2.circle(img, points_2d, 10, (255, 255, 255), -1)
 
-    img = cv2.circle(img, points_2d, 10, (0, 0, 255), -1)
+    print(f"image resolution {img.shape}")
+    print(f"center of axis {points_2d}")
 
     window_name = "Resized_Window"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
