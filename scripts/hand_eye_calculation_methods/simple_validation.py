@@ -19,15 +19,6 @@ dist = np.array(dist)
 Y = np.array(Y)
 Y_inv = np.linalg.inv(Y)
 
-# mtx = np.array( [ [1747.03274843401, 0.0, 521.0492603841079], [0.0, 1747.8694061586648, 494.32395180615987], [0.0, 0.0, 1.0], ])
-# dist = np.array( [ -0.33847195608374453, 0.16968704500434714, 0.0007293228134352138, 0.005422675750927001, 0.9537762252401928, ])
-# marker_size = 0.01
-
-# Y = np.array([[ 0.15755188, 0.51678588, 0.84149258, 0.26527036],
-#               [-0.89806276,-0.27940152, 0.33973234,-0.02360361],
-#               [ 0.41068319,-0.80923862, 0.42008592,-0.08475506],
-#               [ 0.        , 0.        , 0.        , 1.        ]])
-# Y_inv = np.linalg.inv(Y)
 # fmt: on
 
 
@@ -68,10 +59,10 @@ def main():
 
     print(img.shape)
 
-    points_2d = tuple(points_2d.astype(int)[0, 0])
+    points_2d = tuple(points_2d.astype(np.int32)[0, 0])
     print(points_2d)
 
-    img = cv2.circle(img, points_2d, 20, (255, 255, 255), -1)
+    img = cv2.circle(img, points_2d, 10, (255, 255, 255), -1)
 
     window_name = "Resized_Window"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
