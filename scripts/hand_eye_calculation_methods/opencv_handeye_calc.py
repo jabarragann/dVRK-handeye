@@ -1,9 +1,12 @@
+from typing import List
 import numpy as np
 import pandas as pd
 from pathlib import Path
 import cv2
 from dvrk_handeye.VisionTracker import VisionTracker
 from cv2 import aruco
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 # fmt: off
@@ -30,9 +33,54 @@ def load_poses_data(root_path: Path) -> np.ndarray:
 
 
 def to_homogeneous(rot: np.ndarray, t: np.ndarray) -> np.ndarray:
+    assert rot.shape == (3, 3), "Rotation matrix shape should be (3,3)"
+    # fmt: off
+    t_shape_check = t.shape == (3,) or t.shape == (3, 1)
+    # fmt: on
+    assert t_shape_check, "Translation vector shape should be (3,1) or (3,)"
+
+    if t.shape == (3,):
+        t = np.expand_dims(t, axis=1)
+
     T = np.concatenate([rot, t], axis=1)
     T = np.vstack([T, [0, 0, 0, 1]])
+
     return T
+
+
+def validate_measurements_with_gripper_marker_dist(
+    gripper_T_marker_handeye: np.ndarray,
+    base_T_cam_handeye: np.ndarray,
+    cam_T_marker_list: List[np.ndarray],
+    gripper_T_base_list: List[np.ndarray],
+):
+    """
+    Gripper to marker transform is fixed in this experiment.
+    Therefore, it can be used to identify bad measurements
+    """
+
+    gripper_marker_dist = []
+    gripper_marker_err = []
+    for cam_T_marker_i, gripper_T_base_i in zip(cam_T_marker_list, gripper_T_base_list):
+        gripper_T_marker_i = gripper_T_base_i @ base_T_cam_handeye @ cam_T_marker_i
+
+        error = np.linalg.norm(
+            gripper_T_marker_i[:3, 3] - gripper_T_marker_handeye[:3, 3]
+        )
+        gripper_marker_err.append(error)
+        gripper_marker_dist.append(np.linalg.norm(gripper_T_marker_i[:3, 3]))
+
+    gripper_marker_dist = np.array(gripper_marker_dist) * 1000
+    gripper_marker_dist = pd.DataFrame(
+        gripper_marker_dist, columns=["gripper_marker_dist_mm"]
+    )
+    print(
+        f"handeye gripper_to_marker dist {np.linalg.norm(gripper_T_marker_handeye[:3, 3]) * 1000}"
+    )
+
+    fig, ax = plt.subplots()
+    sns.histplot(data=gripper_marker_dist, x="gripper_marker_dist_mm")
+    plt.show()
 
 
 def main():
@@ -68,12 +116,12 @@ def main():
             print(f"Image {i}: Found markers")
             rvec, tvec, marker_points = vision_tracker.estimate_pose(corners[0])
             marker_R = cv2.Rodrigues(rvec)[0]
-            
+
             imgs.append(img)
 
-            cam_T_marker = to_homogeneous(marker_R, tvec[0].T)
+            cam_T_marker = to_homogeneous(marker_R, tvec.squeeze())
             cam_T_marker_rot.append(marker_R)
-            cam_T_marker_t.append(tvec)
+            cam_T_marker_t.append(tvec.squeeze())
 
             marker_T_cam = np.linalg.inv(cam_T_marker)
             marker_T_cam_rot.append(marker_T_cam[:3, :3])
@@ -109,17 +157,27 @@ def main():
     print(f"Base_T_Cam_t {base_T_cam_t}")
     print(f"dist between base and cam {np.linalg.norm(base_T_cam_t)}")
 
-    print("single image validation")
     base_T_cam = to_homogeneous(base_T_cam_rot, base_T_cam_t)
-    gripper_T_marker = to_homogeneous(
-        gripper_T_marker_rot, gripper_T_marker_t
-    )
+    gripper_T_marker = to_homogeneous(gripper_T_marker_rot, gripper_T_marker_t)
 
     print(f"base_T_cam \n{base_T_cam}")
     print(f"gripper_T_marker \n{gripper_T_marker}")
 
     cam_T_base = np.linalg.inv(base_T_cam)
 
+    ## Validate measurements
+    cam_T_marker_list = [
+        to_homogeneous(r, t) for r, t in zip(cam_T_marker_rot, cam_T_marker_t)
+    ]
+    gripper_T_base_list = [
+        to_homogeneous(r, t) for r, t in zip(gripper_T_base_rot, gripper_T_base_t)
+    ]
+    validate_measurements_with_gripper_marker_dist(
+        gripper_T_marker, base_T_cam, cam_T_marker_list, gripper_T_base_list
+    )
+
+    ## Single image validation
+    print("single image validation")
     idx = 30
     test_img = load_images_data(root_path, idx)
     base_T_gripper = robot_poses[idx]
@@ -140,10 +198,12 @@ def main():
     rvec = cv2.Rodrigues(pose[:3, :3])[0]
     points_3d = np.array([[[0, 0, 0]]], np.float32)
     points_2d, _ = cv2.projectPoints(points_3d, rvec, tvec, mtx, dist)
-
     print(points_2d)
 
-    cv2.imshow("img", test_img)
+    window_name = "Resized_Window"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window_name, 640, 480)
+    cv2.imshow(window_name, test_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
