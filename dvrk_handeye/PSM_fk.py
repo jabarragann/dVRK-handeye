@@ -192,73 +192,18 @@ def round_mat(mat, rows, cols, precision=4):
 
 
 if __name__ == "__main__":
-    from pathlib import Path
-    from dvrk_handeye.DataLoading import (
-        load_poses_data,
-        load_images_data,
-        load_joint_data,
-    )
-    import pandas as pd
 
-    T_7_0 = compute_FK([-0.5, 0, 0.2, 0, 0, 0], 7)
+    joints_pose = [0.0, 0, 0.2, 0, 0, 0]
+    T_7_0 = compute_FK(joints_pose, 7)
+    T_6_0 = compute_FK(joints_pose, 6)
+    T_5_0 = compute_FK(joints_pose, 5)
 
-    print(T_7_0)
     print("\n AFTER ROUNDING \n")
+    print("Matrix T_7_0")
     print(round_mat(T_7_0, 4, 4, 3))
 
-    root_path = Path("./datasets/20240213_212744_raw_dataset_handeye_rect_img_local/")
-    measured_jp = load_joint_data(root_path)
-    measured_cp = load_poses_data(root_path)
+    print("Matrix T_6_0")
+    print(round_mat(T_6_0, 4, 4, 3))
 
-    errors = 0
-    rot_tolerance = 1e-2
-    trans_tolerance = 1e-4
-    print("compare FK against robot's measured_cp...")
-    for idx in range(measured_jp.shape[0]):
-        p1 = compute_FK(measured_jp[idx], 7)
-        # print(p1)
-        # print(measured_cp[0])
-        # print(measured_cp[0] - p1)
-        # print(measured_cp[0, :3, :3] @ p1[:3, :3].T)
-
-        # print("difference")
-        # print((measured_cp[0, :3, :3] - p1[:3, :3]) < 1e-5)
-        # print(measured_cp[0, :3, :3] - p1[:3, :3])
-        # print(measured_cp[0, :3, 3].squeeze() - p1[:3, 3].squeeze())
-        try:
-            assert np.allclose(measured_cp[idx, :3, :3], p1[:3, :3], atol=rot_tolerance)
-            assert np.allclose(
-                measured_cp[idx, :3, 3].squeeze(),
-                p1[:3, 3].squeeze(),
-                atol=trans_tolerance,
-            )
-        except AssertionError:
-            print(f"\nPose {idx} has errors bigger than tolerances")
-
-            print("rotational error")
-            print(measured_cp[idx, :3, :3] - p1[:3, :3], "\n")
-            print(abs(measured_cp[idx, :3, :3] - p1[:3, :3]) < rot_tolerance, "\n")
-
-            print("translational error")
-            print(measured_cp[idx, :3, 3].squeeze() - p1[:3, 3].squeeze())
-            print(
-                abs(measured_cp[idx, :3, 3].squeeze() - p1[:3, 3].squeeze())
-                < trans_tolerance
-            )
-            print("\n")
-
-            errors += 1
-
-    print(f"There are {errors} measurements with high errors")
-
-    # Print single measurement
-    # p1 = compute_FK(measured_jp[idx], 7)
-    # print(p1)
-    # print(measured_cp[0])
-    # print(measured_cp[0] - p1)
-    # print(measured_cp[0, :3, :3] @ p1[:3, :3].T)
-
-    # print("difference")
-    # print((measured_cp[0, :3, :3] - p1[:3, :3]) < 1e-5)
-    # print(measured_cp[0, :3, :3] - p1[:3, :3])
-    # print(measured_cp[0, :3, 3].squeeze() - p1[:3, 3].squeeze())
+    print("Matrix T_5_0")
+    print(round_mat(T_5_0, 4, 4, 3))
