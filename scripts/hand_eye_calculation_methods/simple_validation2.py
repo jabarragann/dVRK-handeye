@@ -79,23 +79,18 @@ def create_trans_matrix(x, y, z):
     return np.array([[1, 0, 0, x], [0, 1, 0, y], [0, 0, 1, z], [0, 0, 0, 1]])
 
 
-def main():
-    # raw images
-    root_path = Path("datasets/20240213_212626_raw_dataset_handeye_raw_img_local")
+def draw_instrument_skeleton(
+    img: np.ndarray,
+    measured_jp: np.ndarray,
+    measured_cp: np.ndarray,
+    img_idx: int = -1,
+    debug: bool = False,
+) -> np.ndarray:
 
-    # rectified images
-    # root_path = Path("datasets/20240213_212744_raw_dataset_handeye_rect_img_local")
-
-    idx = 30
-    img = load_images_data(root_path, idx)
-
-    measured_cp = load_poses_data(root_path)
-    measured_jp = load_joint_data(root_path)
-
-    base_T_gripper = measured_cp[idx]
-    base_T_gripper_from_fk = compute_FK(measured_jp[idx], 7)
-    base_T_wrist_pitch = compute_FK(measured_jp[idx], 5)
-
+    base_T_gripper = measured_cp
+    base_T_gripper_from_fk = compute_FK(measured_jp, 7)
+    base_T_wrist_pitch = compute_FK(measured_jp, 5)
+    # create pose along shaft
     offset_T = create_trans_matrix(-0.05, 0, 0)
     base_T_shaft = base_T_wrist_pitch @ offset_T
 
@@ -107,12 +102,38 @@ def main():
     img = draw_line_on_img(gripper_in_img, pitch_axis_in_img, img)
     img = draw_line_on_img(pitch_axis_in_img, shaft_in_img, img)
 
-    print(f"{base_T_gripper}")
-    print(f"image resolution {img.shape}")
-    print(f"location of gripper in img {gripper_in_img}")
-    print(f"location of gripper from fk in img {gripper_from_fk_in_img}")
-    print(f"location of pitch axis in img {pitch_axis_in_img}")
-    print(f"location of shaft in img {shaft_in_img}")
+    if debug:
+        print(f"{base_T_gripper}")
+        print(f"image resolution {img.shape}")
+        print(f"location of gripper in img {gripper_in_img}")
+        print(f"location of gripper from fk in img {gripper_from_fk_in_img}")
+        print(f"location of pitch axis in img {pitch_axis_in_img}")
+        print(f"location of shaft in img {shaft_in_img}")
+
+    try:
+        assert gripper_in_img == gripper_from_fk_in_img
+    except AssertionError:
+        print("Discrepancies between fk model and measured_cp in img {img_idx}")
+
+    return img
+
+
+def single_img_main():
+    # raw images
+    root_path = Path("datasets/20240213_212626_raw_dataset_handeye_raw_img_local")
+
+    # rectified images
+    # root_path = Path("datasets/20240213_212744_raw_dataset_handeye_rect_img_local")
+
+    idx = 31
+    img = load_images_data(root_path, idx)
+
+    measured_cp = load_poses_data(root_path)
+    measured_jp = load_joint_data(root_path)
+
+    img = draw_instrument_skeleton(
+        img, measured_jp[idx], measured_cp[idx], idx, debug=True
+    )
 
     window_name = "Resized_Window"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
@@ -123,4 +144,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    single_img_main()
