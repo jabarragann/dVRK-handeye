@@ -17,3 +17,9 @@ def load_poses_data(root_path: Path):
     pose_data = pose_data.reshape(-1, 4, 4)
 
     return pose_data
+
+def load_joint_data(root_path: Path):
+    file_path = root_path / "joint_data.csv"
+    joint_data = pd.read_csv(file_path).values
+    joint_data = joint_data[:, 1:]  # remove index column
+    return joint_data
