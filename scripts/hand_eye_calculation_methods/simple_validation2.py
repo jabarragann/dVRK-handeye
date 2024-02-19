@@ -70,7 +70,7 @@ def draw_line_on_img(
     point1: Tuple[int], point2: Tuple[int], img: np.ndarray
 ) -> np.ndarray:
     thickness = 4
-    color = (255, 255, 255)
+    color = (0, 255, 255)
     img = cv2.line(img, point1, point2, color, thickness)
     return img
 
@@ -113,12 +113,14 @@ def draw_instrument_skeleton(
     try:
         assert gripper_in_img == gripper_from_fk_in_img
     except AssertionError:
-        print("Discrepancies between fk model and measured_cp in img {img_idx}")
+        print(
+            f"Discrepancies between fk model ({gripper_in_img}) and measured_cp ({gripper_from_fk_in_img}) in img {img_idx}"
+        )
 
     return img
 
 
-def single_img_main():
+def single_img_validation():
     # raw images
     root_path = Path("datasets/20240213_212626_raw_dataset_handeye_raw_img_local")
 
@@ -143,5 +145,39 @@ def single_img_main():
     cv2.destroyAllWindows()
 
 
+def multi_img_validation():
+    from dvrk_handeye.opencv_utils import VideoWriter
+
+    # raw images
+    root_path = Path("datasets/20240213_212626_raw_dataset_handeye_raw_img_local")
+
+    # rectified images
+    # root_path = Path("datasets/20240213_212744_raw_dataset_handeye_rect_img_local")
+
+    file_name = root_path.name + ".mp4"
+    video_writer = VideoWriter(
+        output_dir="temp",
+        width=1280,
+        height=1024,
+        fps=3,
+        file_name=file_name,
+    )
+
+    idx = 31
+    img = load_images_data(root_path, idx)
+    measured_cp = load_poses_data(root_path)
+    measured_jp = load_joint_data(root_path)
+
+    with video_writer as writer:
+        for i in range(0, measured_cp.shape[0] - 20):
+            img = load_images_data(root_path, i)
+            img = draw_instrument_skeleton(
+                img, measured_jp[i], measured_cp[i], i, debug=False
+            )
+            writer.write_frame(i, img)
+
+
 if __name__ == "__main__":
-    single_img_main()
+    # single_img_validation()
+
+    multi_img_validation()

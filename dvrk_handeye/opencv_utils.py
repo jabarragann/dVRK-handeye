@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Union
 import numpy as np
 import cv2
 
@@ -15,8 +18,6 @@ def draw_axis(
     points = np.float32([[s, 0, 0], [0, s, 0], [0, 0, s], [0, 0, 0]]).reshape(-1, 3)
     axisPoints, _ = cv2.projectPoints(points, rotV, t, K, dist)
     axisPoints = axisPoints.astype(int)
-
-    print(f"center of axis {axisPoints[-1]}")
 
     img = cv2.line(
         img,
@@ -41,3 +42,37 @@ def draw_axis(
         thickness,
     )
     return img
+
+
+@dataclass
+class VideoWriter:
+    output_dir: Union[Path, str]
+    width: int
+    height: int
+    fps: int
+    file_name: str = None
+
+    def __post_init__(self):
+        self.output_dir = Path(self.output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        if self.file_name is None:
+            self.full_path = self.output_dir / f"output.mp4"
+        else:
+            self.full_path = self.output_dir / self.file_name
+
+        self.full_path = str(self.full_path)
+        self.fourcc = cv2.VideoWriter_fourcc(*"MPEG")
+
+        self.out = cv2.VideoWriter(
+            self.full_path, self.fourcc, self.fps, (self.width, self.height)
+        )
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.out.release()
+
+    def write_frame(self, idx: int, frame: np.ndarray):
+        self.out.write(frame)
