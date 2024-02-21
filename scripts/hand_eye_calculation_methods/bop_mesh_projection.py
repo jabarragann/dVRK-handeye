@@ -9,7 +9,7 @@ from dvrk_handeye.PSM_fk import compute_FK
 from dvrk_handeye.opencv_utils import draw_axis
 import cv2
 from tqdm import tqdm
-from scripts.hand_eye_calculation_methods.simple_validation2 import (
+from scripts.hand_eye_calculation_methods.handeye_simple_validation2 import (
     draw_instrument_skeleton,
 )
 
