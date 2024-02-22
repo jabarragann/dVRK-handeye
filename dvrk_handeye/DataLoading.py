@@ -23,3 +23,9 @@ def load_joint_data(root_path: Path):
     joint_data = pd.read_csv(file_path).values
     joint_data = joint_data[:, 1:]  # remove index column
     return joint_data
+
+def load_joint_data_super(root_path:Path):
+    file_path = root_path / "joint_data.csv"
+    joint_data = pd.read_csv(file_path).values
+    joint_data = joint_data[:, 1:-1]  # remove index column
+    return joint_data
